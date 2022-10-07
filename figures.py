@@ -111,13 +111,32 @@ class Disk(object):
             return None
 
         return Intersect(distance = intersect.distance,
-                         point = intersect.point,
-                         normal = self.plane.normal,
-                         texcoords = None,
-                         sceneObj = self)
+                        point = intersect.point,
+                        normal = self.plane.normal,
+                        texcoords = None,
+                        sceneObj = self
+                        )
 
 
+class Cilinder(object):
 
+    def __init__(self, position, radio, height, material) -> None:
+        self.radio = radio
+        self.height = height
+        self.material = material
+        self.position = position
+        self.upper_disk: Disk = Disk([self.position[0], self.position[1]+self.height/2, self.position[2]], self.radio, (0, 1, 0), self.material)
+        self.down_disk: Disk = Disk([self.position[0], self.position[1]-self.height/2, self.position[2]], self.radio, (0, -1, 0), self.material)
+
+
+    def ray_intersect(self, orig, dir):
+        intersect = self.upper_disk.ray_intersect(orig, dir) 
+        if intersect: 
+            return intersect
+        intersect = self.down_disk.ray_intersect(orig, dir)
+        if intersect: 
+            return intersect
+        return None
 
 class AABB(object):
     # Axis Aligned Bounding Box
