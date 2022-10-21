@@ -4,8 +4,8 @@ from figures import *
 from lights import *
 
 
-width = 512
-height = 512
+width = 1024
+height = 1024
 
 centrox = 0
 centroy = -1
