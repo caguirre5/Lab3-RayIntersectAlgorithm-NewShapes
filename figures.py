@@ -1,7 +1,7 @@
 import numpy as np
 
-WHITE = (1,1,1)
-BLACK = (0,0,0)
+WHITE = (1, 1, 1)
+BLACK = (0, 0, 0)
 
 OPAQUE = 0
 REFLECTIVE = 1
@@ -16,8 +16,9 @@ class Intersect(object):
         self.texcoords = texcoords
         self.sceneObj = sceneObj
 
+
 class Material(object):
-    def __init__(self, diffuse = WHITE, spec = 1.0, ior = 1.0, texture = None, matType = OPAQUE):
+    def __init__(self, diffuse=WHITE, spec=1.0, ior=1.0, texture=None, matType=OPAQUE):
         self.diffuse = diffuse
         self.spec = spec
         self.ior = ior
@@ -48,7 +49,7 @@ class Sphere(object):
             t0 = t1
         if t0 < 0:
             return None
-        
+
         # P = O + t0 * D
         P = np.add(orig, t0 * np.array(dir))
         normal = np.subtract(P, self.center)
@@ -57,13 +58,13 @@ class Sphere(object):
         u = 1 - ((np.arctan2(normal[2], normal[0]) / (2 * np.pi)) + 0.5)
         v = np.arccos(-normal[1]) / np.pi
 
-        uvs = (u,v)
+        uvs = (u, v)
 
-        return Intersect(distance = t0,
-                         point = P,
-                         normal = normal,
-                         texcoords = uvs,
-                         sceneObj = self)
+        return Intersect(distance=t0,
+                         point=P,
+                         normal=normal,
+                         texcoords=uvs,
+                         sceneObj=self)
 
 
 class Plane(object):
@@ -74,22 +75,23 @@ class Plane(object):
 
     def ray_intersect(self, orig, dir):
         # Distancia = (( planePos - origRayo) o normal) / (direccionRayo o normal)
-        denom = np.dot( dir, self.normal)
+        denom = np.dot(dir, self.normal)
 
         if abs(denom) > 0.0001:
-            num = np.dot( np.subtract(self.position, orig), self.normal)
+            num = np.dot(np.subtract(self.position, orig), self.normal)
             t = num / denom
 
             if t > 0:
                 # P = O + t*D
                 P = np.add(orig, t * np.array(dir))
-                return Intersect(distance = t,
-                                 point = P,
-                                 normal = self.normal,
-                                 texcoords = None,
-                                 sceneObj = self)
+                return Intersect(distance=t,
+                                 point=P,
+                                 normal=self.normal,
+                                 texcoords=None,
+                                 sceneObj=self)
 
         return None
+
 
 class Disk(object):
     def __init__(self, position, radius, normal,  material):
@@ -110,12 +112,43 @@ class Disk(object):
         if contact > self.radius:
             return None
 
-        return Intersect(distance = intersect.distance,
-                        point = intersect.point,
-                        normal = self.plane.normal,
-                        texcoords = None,
-                        sceneObj = self
-                        )
+        return Intersect(distance=intersect.distance,
+                         point=intersect.point,
+                         normal=self.plane.normal,
+                         texcoords=None,
+                         sceneObj=self
+                         )
+
+
+class Torus(object):
+    def __init__(self, position, radius, normal,  material):
+        self.plane = Plane(position, normal, material)
+        self.material = material
+        self.radius = radius
+
+    def ray_intersect(self, orig, dir):
+
+        intersect = self.plane.ray_intersect(orig, dir)
+
+        if intersect is None:
+            return None
+
+        contact = np.subtract(intersect.point, self.plane.position)
+        contact = np.linalg.norm(contact)
+
+        if contact > self.radius:
+            return None
+
+        finalradius = self.radius-(self.radius/4)
+
+        if finalradius > contact:
+            return None
+
+        return Intersect(distance=intersect.distance,
+                         point=intersect.point,
+                         normal=self.plane.normal,
+                         texcoords=None,
+                         sceneObj=self)
 
 
 class Cilinder(object):
@@ -125,18 +158,20 @@ class Cilinder(object):
         self.height = height
         self.material = material
         self.position = position
-        self.upper_disk: Disk = Disk([self.position[0], self.position[1]+self.height/2, self.position[2]], self.radio, (0, 1, 0), self.material)
-        self.down_disk: Disk = Disk([self.position[0], self.position[1]-self.height/2, self.position[2]], self.radio, (0, -1, 0), self.material)
-
+        self.upper_disk: Disk = Disk(
+            [self.position[0], self.position[1]+self.height/2, self.position[2]], self.radio, (0, 1, 0), self.material)
+        self.down_disk: Disk = Disk([self.position[0], self.position[1]-self.height/2,
+                                    self.position[2]], self.radio, (0, -1, 0), self.material)
 
     def ray_intersect(self, orig, dir):
-        intersect = self.upper_disk.ray_intersect(orig, dir) 
-        if intersect: 
+        intersect = self.upper_disk.ray_intersect(orig, dir)
+        if intersect:
             return intersect
         intersect = self.down_disk.ray_intersect(orig, dir)
-        if intersect: 
+        if intersect:
             return intersect
         return None
+
 
 class AABB(object):
     # Axis Aligned Bounding Box
@@ -148,34 +183,39 @@ class AABB(object):
 
         self.planes = []
 
-        halfSizes = [0,0,0]
+        halfSizes = [0, 0, 0]
 
         halfSizes[0] = size[0] / 2
         halfSizes[1] = size[1] / 2
         halfSizes[2] = size[2] / 2
 
         # Sides
-        self.planes.append( Plane( np.add(position, (halfSizes[0],0,0)), (1,0,0), material ))
-        self.planes.append( Plane( np.add(position, (-halfSizes[0],0,0)), (-1,0,0), material ))
+        self.planes.append(
+            Plane(np.add(position, (halfSizes[0], 0, 0)), (1, 0, 0), material))
+        self.planes.append(
+            Plane(np.add(position, (-halfSizes[0], 0, 0)), (-1, 0, 0), material))
 
         # Up and Down
-        self.planes.append( Plane( np.add(position, (0,halfSizes[1],0)), (0,1,0), material ))
-        self.planes.append( Plane( np.add(position, (0,-halfSizes[1],0)), (0,-1,0), material ))
+        self.planes.append(
+            Plane(np.add(position, (0, halfSizes[1], 0)), (0, 1, 0), material))
+        self.planes.append(
+            Plane(np.add(position, (0, -halfSizes[1], 0)), (0, -1, 0), material))
 
         # Front and back
-        self.planes.append( Plane( np.add(position, (0,0,halfSizes[2])), (0,0,1), material ))
-        self.planes.append( Plane( np.add(position, (0,0,-halfSizes[2])), (0,0,-1), material ))
+        self.planes.append(
+            Plane(np.add(position, (0, 0, halfSizes[2])), (0, 0, 1), material))
+        self.planes.append(
+            Plane(np.add(position, (0, 0, -halfSizes[2])), (0, 0, -1), material))
 
-        #Bounds
-        self.boundsMin = [0,0,0]
-        self.boundsMax = [0,0,0]
+        # Bounds
+        self.boundsMin = [0, 0, 0]
+        self.boundsMax = [0, 0, 0]
 
         epsilon = 0.001
 
         for i in range(3):
             self.boundsMin[i] = self.position[i] - (epsilon + halfSizes[i])
             self.boundsMax[i] = self.position[i] + (epsilon + halfSizes[i])
-
 
     def ray_intersect(self, orig, dir):
         intersect = None
@@ -202,26 +242,30 @@ class AABB(object):
                                 # Las uvs de las caras de los lados
                                 if abs(plane.normal[0]) > 0:
                                     # Mapear uvs para el eje x, usando las coordenadas de Y y Z
-                                    u = (planeInter.point[1] - self.boundsMin[1]) / self.size[1]
-                                    v = (planeInter.point[2] - self.boundsMin[2]) / self.size[2]
+                                    u = (
+                                        planeInter.point[1] - self.boundsMin[1]) / self.size[1]
+                                    v = (
+                                        planeInter.point[2] - self.boundsMin[2]) / self.size[2]
 
                                 elif abs(plane.normal[1] > 0):
                                     # Mapear uvs para el eje y, usando las coordenadas de X y Z
-                                    u = (planeInter.point[0] - self.boundsMin[0]) / self.size[0]
-                                    v = (planeInter.point[2] - self.boundsMin[2]) / self.size[2]
+                                    u = (
+                                        planeInter.point[0] - self.boundsMin[0]) / self.size[0]
+                                    v = (
+                                        planeInter.point[2] - self.boundsMin[2]) / self.size[2]
 
                                 elif abs(plane.normal[2] > 0):
                                     # Mapear uvs para el eje z, usando las coordenadas de X y Y
-                                    u = (planeInter.point[0] - self.boundsMin[0]) / self.size[0]
-                                    v = (planeInter.point[1] - self.boundsMin[1]) / self.size[1]
-
+                                    u = (
+                                        planeInter.point[0] - self.boundsMin[0]) / self.size[0]
+                                    v = (
+                                        planeInter.point[1] - self.boundsMin[1]) / self.size[1]
 
         if intersect is None:
             return None
 
-        return Intersect(distance = t,
-                         point = intersect.point,
-                         normal = intersect.normal,
-                         texcoords = (u,v),
-                         sceneObj = self)
-
+        return Intersect(distance=t,
+                         point=intersect.point,
+                         normal=intersect.normal,
+                         texcoords=(u, v),
+                         sceneObj=self)
